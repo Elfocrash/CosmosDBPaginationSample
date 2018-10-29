@@ -1,0 +1,95 @@
+﻿@using PaginationTest.Shared
+@page "/skiptakefetchdata"
+@inject HttpClient Http
+
+<h1>Page Size/Page Number Pagination Example</h1>
+
+<p>This component demonstrates fetching paginated data from the server.</p>
+
+@if (_students == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+
+    if (_students.NumSizePager.EndPage > 1)
+    {
+        <form class="form-inline">
+
+            <div class="form-group mb-2">
+                <label for="pageSize" class="col-sm-3">Page Size</label>
+                <div class="form-group mx-sm-3 mb-2">
+                    <input type="number" class="form-control" id="pageSize" value="@(_pageSize)" bind="@(_pageSize)" placeholder="Page size" />
+                    <a href="javascript:void(0)" onclick=@(async () => await LoadDataAsync(1, _pageSize)) class="btn btn-primary mb-2">Update</a>
+                </div>
+            </div>
+        </form>
+        <nav aria-label="Page navigation example">
+            <ul class="pagination">
+                @if (_students.NumSizePager.CurrentPage > 1)
+                {
+                    <li class="page-item">
+                        <a class="page-link" href="javascript:void(0)" onclick=@(async () => await LoadDataAsync(1, _pageSize))>First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="javascript:void(0)" onclick=@(async () => await LoadDataAsync(_students.NumSizePager.CurrentPage - 1, _pageSize))>Previous</a>
+                    </li>
+                }
+
+                @for (var page = _students.NumSizePager.StartPage; page <= _students.NumSizePager.EndPage; page++)
+                {
+                    <li class="page-item @(page == _students.NumSizePager.CurrentPage ? "active" : "")">
+                        @{ var currentPage = page;}
+                        <a class="page-link" href="javascript:void(0)" onclick=@(async () => await LoadDataAsync(currentPage, _pageSize))>@(currentPage)</a>
+                    </li>
+                }
+
+                @if (_students.NumSizePager.CurrentPage < _students.NumSizePager.TotalPages)
+                {
+                    <li class="page-item">
+                        <a class="page-link" href="javascript:void(0)" onclick=@(async () => await LoadDataAsync(_students.NumSizePager.CurrentPage + 1, _pageSize))>Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="javascript:void(0)" onclick=@(async () => await LoadDataAsync(_students.NumSizePager.TotalPages, _pageSize))>Last</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>First Name</th>
+                <th>Last Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var student in _students.Items)
+            {
+                <tr>
+                    <td>@student.FirstName</td>
+                    <td>@student.LastName</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+}
+
+@functions {
+NumSizePagedData<Student> _students;
+int _pageSize = 10;
+
+protected override async Task OnInitAsync()
+{
+    await LoadDataAsync(1, _pageSize);
+}
+
+protected async Task LoadDataAsync(int page, int pageSize)
+{
+    _students = await Http.GetJsonAsync<NumSizePagedData<Student>>($"api/students/skiptake?page={page}&pageSize={pageSize}");
+    _pageSize = pageSize;
+}
+}

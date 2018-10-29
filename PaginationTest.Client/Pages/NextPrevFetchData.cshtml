@@ -1,0 +1,90 @@
+﻿@using System.Net
+@using PaginationTest.Shared
+@page "/nextprevfetchdata"
+@inject HttpClient Http
+
+<h1>Page Size/Page Number Pagination Example</h1>
+
+<p>This component demonstrates fetching paginated data from the server.</p>
+
+@if (_students == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <nav aria-label="Page navigation example">
+        <ul class="pagination">
+            @if (currentPageNumber > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="javascript:void(0)" onclick=@(async () => await LoadDataAsync(continuationTokens[1], _pageSize, 1))>First</a>
+                </li>
+            }
+
+            @if (currentPageNumber > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="javascript:void(0)" onclick=@(async () => await LoadDataAsync(continuationTokens[currentPageNumber - 1], _pageSize, currentPageNumber - 1))>Previous</a>
+                </li>
+            }
+
+            @if (_students.Pager.HasNextPage)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="javascript:void(0)" onclick=@(async ()=>await LoadDataAsync(_students.Pager.ContinuationToken, _pageSize, currentPageNumber + 1))>Next</a>
+                </li>
+            }
+        </ul>
+    </nav>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>First Name</th>
+                <th>Last Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var student in _students.Items)
+            {
+                <tr>
+                    <td>@student.FirstName</td>
+                    <td>@student.LastName</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+}
+
+@functions {
+    NextPrevPagedData<Student> _students;
+    int currentPageNumber = 1;
+    int _pageSize = 10;
+    IDictionary<int, string> continuationTokens = new Dictionary<int, string>();
+
+    protected override async Task OnInitAsync()
+    {
+        await LoadDataAsync(String.Empty, _pageSize);
+    }
+
+    protected async Task LoadDataAsync(string continuationToken, int pageSize, int pageNum = 1)
+    {
+        if (continuationTokens.ContainsKey(pageNum))
+        {
+
+            _students = await Http.GetJsonAsync<NextPrevPagedData<Student>>($"api/students/nextprev?continuationToken={WebUtility.UrlEncode(continuationToken)}&pageSize={pageSize}");
+            _pageSize = pageSize;
+            currentPageNumber = pageNum;
+            return;
+        }
+
+        currentPageNumber = pageNum;
+        _students = await Http.GetJsonAsync<NextPrevPagedData<Student>>($"api/students/nextprev?continuationToken={WebUtility.UrlEncode(continuationToken)}&pageSize={pageSize}");
+        _pageSize = pageSize;
+
+        continuationTokens[currentPageNumber] = continuationToken;
+        continuationTokens[currentPageNumber + 1] = _students.Pager.ContinuationToken;
+    }
+}
